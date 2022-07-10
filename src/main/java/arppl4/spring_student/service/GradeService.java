@@ -2,6 +2,7 @@ package arppl4.spring_student.service;
 
 
 import arppl4.spring_student.exception.NotFoundException;
+import arppl4.spring_student.exception.ValueNotSetException;
 import arppl4.spring_student.model.Grade;
 import arppl4.spring_student.model.Student;
 import arppl4.spring_student.model.Subject;
@@ -12,13 +13,15 @@ import arppl4.spring_student.repository.StudentRepository;
 import arppl4.spring_student.repository.SubjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,7 +37,7 @@ public class GradeService {
         Optional<Student> optionalStudent = studentRepository.findById(studentId);
         Optional<Subject> optionalSubject = subjectRepository.findById(subjectId);
         if (optionalStudent.isPresent() && optionalSubject.isPresent()) {
-            Grade grade = new Grade(addGradeRequest, optionalStudent.get(), optionalSubject.get());
+            Grade grade = new Grade(addGradeRequest.getValue(), optionalStudent.get(), optionalSubject.get());
             gradeRepository.save(grade);
         } else {
             throw new NotFoundException("Nie ma przedmiotu lub studenta");
@@ -46,13 +49,17 @@ public class GradeService {
         if (optionalStudent.isPresent()) {
             Student student = optionalStudent.get();
             Set<Grade> grades = student.getGradeList();
-            Set<GradeDTO> gradesDTO = new HashSet<>();
-            for (Grade grade : grades) {
-                gradesDTO.add(grade.mapToGradeDTO());
-            }
-            return gradesDTO;
+//            Set<GradeDTO> gradesDTO = new HashSet<>();
+//            for (Grade grade : grades) {
+//                gradesDTO.add(grade.mapToGradeDTO());
+//            }
+
+            return grades.stream()
+                    .map((grade) -> {
+                        return grade.mapToGradeDTO();
+                    }).collect(Collectors.toSet());
         }
-        return Set.of();
+        throw new NotFoundException("Lista ocen jest pusta");
     }
 
     public Set<GradeDTO> listGrades(Long studentId, Long subjectId) {
@@ -70,16 +77,17 @@ public class GradeService {
         if (optionalStudent.isPresent() && optionalSubject.isPresent()) {
             Student student = optionalStudent.get();
             Subject subject = optionalSubject.get();
-            Set<Grade> grades = student.getGradeList();
-            Set<Grade> gradesForSubject = new HashSet<>();
-            for (Grade grade : grades) {
-                if (subject.getId().equals(grade.getSubject().getId())) {
-                    gradesForSubject.add(grade);
-                }
-            }
-            return gradesForSubject;
+//            Set<Grade> grades = student.getGradeList();
+//            Set<Grade> gradesForSubject = new HashSet<>();
+//            for (Grade grade : grades) {
+//                if (subject.getId().equals(grade.getSubject().getId())) {
+//                    gradesForSubject.add(grade);
+//                }
+//            }
+
+            return gradeRepository.findAllByStudentAndSubject(student, subject);
         }
-        return Set.of();
+        throw new NotFoundException("Lista ocen jest pusta");
     }
 
 
@@ -101,6 +109,8 @@ public class GradeService {
             Grade gradeToUpdate = optionalGrade.get();
             if (gradeDTO.getValue() != null) {
                 gradeToUpdate.setValue(gradeDTO.getValue());
+            } else {
+                throw new ValueNotSetException("Musisz podać wartość");
             }
             gradeRepository.save(gradeToUpdate);
             log.info("Ocena została poprawiona");
@@ -109,7 +119,7 @@ public class GradeService {
         throw new EntityNotFoundException("Nie znaleziono oceny o id " + id);
     }
 
-    public GradeDTO getOneGrad(Long gradeId) {
+    public GradeDTO getOneGrade(Long gradeId) {
         Optional<Grade> optionalGrade = gradeRepository.findById(gradeId);
         if (optionalGrade.isPresent()) {
             return optionalGrade.get().mapToGradeDTO();

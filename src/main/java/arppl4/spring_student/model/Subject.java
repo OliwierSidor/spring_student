@@ -29,7 +29,11 @@ public class Subject {
         return new SubjectDTO(id, subjectName);
     }
 
-    public Subject(AddSubjectRequest addSubjectRequest){
-        this.subjectName = addSubjectRequest.getSubjectName();
+//    public Subject(AddSubjectRequest addSubjectRequest){
+//        this.subjectName = addSubjectRequest.getSubjectName();
+//    }
+
+    public Subject(String subjectName) {
+        this.subjectName = subjectName;
     }
 }

@@ -1,6 +1,8 @@
 package arppl4.spring_student.service;
 
 import arppl4.spring_student.exception.NotFoundException;
+import arppl4.spring_student.exception.StudentHaveGradesException;
+import arppl4.spring_student.exception.ValueNotSetException;
 import arppl4.spring_student.model.Grade;
 import arppl4.spring_student.model.Student;
 import arppl4.spring_student.model.Subject;
@@ -16,26 +18,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StudentService {
     private final StudentRepository studentRepository;
-    private final GradeService gradeService;
     private final SubjectRepository subjectRepository;
 
     public List<StudentDTO> findAllStudents() {
         List<Student> studentList = studentRepository.findAll();
-        List<StudentDTO> studentDTOS = new ArrayList<>();
-        for (Student student : studentList) {
-            studentDTOS.add(student.mapToStudentDTO());
-        }
-        return studentDTOS;
+        return studentList.stream().map(Student::mapToStudentDTO).collect(Collectors.toList());
     }
 
     public void addStudent(AddStudentRequest studentDTO) {
@@ -48,6 +43,9 @@ public class StudentService {
         Optional<Student> optionalStudent = studentRepository.findById(id);
         if (optionalStudent.isPresent()) {
             Student studentToUpdate = optionalStudent.get();
+            if (studentDTO.getName() == null && studentDTO.getSurname() == null && studentDTO.getDateOfBirth() == null) {
+                throw new ValueNotSetException("Nie podałeś żadnego pola do edycji");
+            }
             if (studentDTO.getName() != null) {
                 studentToUpdate.setName(studentDTO.getName());
             }
@@ -59,9 +57,9 @@ public class StudentService {
             }
             studentRepository.save(studentToUpdate);
             log.info("Student został zaktualizowany");
-            return;
+        } else {
+            throw new EntityNotFoundException("Nie znaleziono studenta o id: " + id);
         }
-        throw new EntityNotFoundException("Nie znaleziono studenta o id: " + id);
     }
 
     public void deleteStudent(Long id) {
@@ -72,7 +70,7 @@ public class StudentService {
                 studentRepository.delete(student);
                 log.info("Usunięto studenta: " + student);
             } else {
-                log.info("Nie można usunąć " + student + " bo ma oceny");
+                throw new StudentHaveGradesException("Nie można usunąć studenta który ma oceny");
             }
         } else {
             throw new EntityNotFoundException("Nie znaleziono studenta o id: " + id);
@@ -80,9 +78,7 @@ public class StudentService {
     }
 
     public void addStudents(List<AddStudentRequest> list) {
-        for (AddStudentRequest addStudentRequest : list) {
-            addStudent(addStudentRequest);
-        }
+        list.stream().forEach(this::addStudent);
     }
 
     public StudentDTO findOne(Long studentId) {
@@ -94,24 +90,28 @@ public class StudentService {
         }
     }
 
-    public StudentAverageCheckResponse checkAvg(Long studentId, Long subjectId) {
-        Set<Grade> grades = gradeService.getGrades(studentId, subjectId);
-        Optional<Subject> optionalSubject = subjectRepository.findById(subjectId);
-        String subjectName = null;
-        if (optionalSubject.isPresent()) {
-            Subject subject = optionalSubject.get();
-            subjectName = subject.getSubjectName();
+    public Set<StudentAverageCheckResponse> checkAvg(Long studentId) {
+        Optional<Student> optionalStudent = studentRepository.findById(studentId);
+        if (optionalStudent.isPresent()) {
+            return optionalStudent.get().getGradeList().stream() // wez wszystkie oceny studenta
+                    .collect(Collectors.groupingBy(grade -> grade.getSubject().getSubjectName())).entrySet().stream() // pogrupuj je po przedmiocie
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> calculateAvg(e.getValue()))).entrySet().stream() // policz srednia dla kazdego przedmiotu
+                    .map(e -> new StudentAverageCheckResponse(studentId, e.getKey(), e.getValue(), e.getValue() < 2.0)) // stworz wynik dla kazdego przedmiotu
+                    .collect(Collectors.toSet()); // zbierz wyniki do zbioru
+        } else {
+            throw new NotFoundException("Nie znaleziono przedmiotu lub studenta");
         }
-        Double avg = calculateAvg(grades);
-        boolean gradeAtRisk = avg < 2.0;
-        return new StudentAverageCheckResponse(studentId, subjectName, avg, gradeAtRisk);
     }
 
-    private Double calculateAvg(Set<Grade> grades) {
+    private Double calculateAvg(Collection<Grade> grades) {
         double sum = 0.0;
-        for (Grade grade : grades) {
-            sum = sum + grade.getValue();
+        if (!grades.isEmpty()) {
+            for (Grade grade : grades) {
+                sum = sum + grade.getValue();
+            }
+            return sum / grades.size();
+        } else {
+            throw new NotFoundException("Lista ocen jest pusta - nie można dzielić przez zero");
         }
-        return sum / grades.size();
     }
 }

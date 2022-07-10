@@ -52,6 +52,6 @@ public class GradeController {
     @GetMapping("/grade")
     public GradeDTO getOneGrade(@RequestParam Long gradeId) {
         log.info("Wywołano metodę oneGrade");
-        return gradeService.getOneGrad(gradeId);
+        return gradeService.getOneGrade(gradeId);
     }
 }

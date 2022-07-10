@@ -3,6 +3,7 @@ package arppl4.spring_student.controller;
 import arppl4.spring_student.model.Student;
 import arppl4.spring_student.model.dto.AddStudentRequest;
 import arppl4.spring_student.model.dto.StudentAverageCheckRequest;
+import arppl4.spring_student.model.dto.StudentAverageCheckResponse;
 import arppl4.spring_student.model.dto.StudentDTO;
 import arppl4.spring_student.service.StudentService;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +55,10 @@ public class StudentController {
         log.info("wywołano metodę findOne");
         return studentService.findOne(studentId);
     }
+
     @GetMapping("/avg")
-    public Double checkAvg(@RequestBody StudentAverageCheckRequest request){
+    public StudentAverageCheckResponse checkAvg(@RequestBody StudentAverageCheckRequest request){
         log.info("Wywołano metodę checkAvg");
-        return  studentService.checkAvg(request.getStudentId(), request.getSubjectId());
+        return  studentService.checkAvg(request.getStudentId());
     }
 }

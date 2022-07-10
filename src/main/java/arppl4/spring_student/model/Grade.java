@@ -35,8 +35,8 @@ public class Grade {
         return new GradeDTO(id, value, student.getId(), subject.getId());
     }
 
-    public Grade(AddGradeRequest gradeRequest, Student student, Subject subject) {
-        this.value = gradeRequest.getValue();
+    public Grade(Integer value, Student student, Subject subject) {
+        this.value = value;
         this.student = student;
         this.subject = subject;
     }

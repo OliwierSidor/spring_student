@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,18 +38,13 @@ public class SubjectService {
                 throw new SubjectAlreadyExistsException("Nie mogę dodać przedmiotu bo już taki istnieje");
             }
         }
-        addSubjectRequest.setSubjectName(addSubjectRequest.getSubjectName().replace(" ", "").toLowerCase());
-        Subject newSubject = new Subject(addSubjectRequest);
+        Subject newSubject = new Subject(addSubjectRequest.getSubjectName());
         subjectRepository.save(newSubject);
     }
 
     public List<SubjectDTO> listAllStudents() {
         List<Subject> subjectList = subjectRepository.findAll();
-        List<SubjectDTO> subjectDTOS = new ArrayList<>();
-        for (Subject subject : subjectList) {
-            subjectDTOS.add(subject.mapToSubjectDTO());
-        }
-        return subjectDTOS;
+        return subjectList.stream().map(subject -> {return subject.mapToSubjectDTO();}).collect(Collectors.toList());
     }
 
     public void deleteSubject(Long subjectId) {
@@ -67,9 +63,7 @@ public class SubjectService {
     }
 
     public void addSubjects(List<AddSubjectRequest> list) {
-        for (AddSubjectRequest addSubjectRequest : list) {
-            addSubject(addSubjectRequest);
-        }
+        list.forEach(this::addSubject);
     }
 
     public SubjectDTO getSubject(Long subjectId) {

@@ -26,7 +26,7 @@ public class SubjectController {
         subjectService.addSubject(addSubjectRequest);
     }
 
-    @PostMapping("/addsubjects")
+    @PostMapping("/list")
     @ResponseStatus(HttpStatus.CREATED)
     public void addSubjects(@RequestBody List<AddSubjectRequest> list) {
         log.info("Wywołano metodę addStudents");
@@ -45,11 +45,12 @@ public class SubjectController {
         subjectService.deleteSubject(subjectId);
     }
 
-    @GetMapping("/subject")
-    public SubjectDTO Subject(@RequestParam Long subjectId) {
+    @GetMapping("/{subjectId}")
+    public SubjectDTO subject(@PathVariable Long subjectId) {
         log.info("Wywołano metodę Subject");
         return subjectService.getSubject(subjectId);
     }
+
     @GetMapping("/avg")
     public StudentSubjectAverageResponse subjectAvg(@RequestBody StudentSubjectAverageRequest request){
         log.info("Wywołano metodę subjectAvg");
